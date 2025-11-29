@@ -13,7 +13,7 @@ This repository contains a small web UI (`web_ble_ui.html`) that allows connecti
 
 ## Next steps
 
-- Initialize a remote GitHub repo and push this project (optional).  
+- Initialize a remote GitHub repo and push this project (optional).
 - Add a license or other docs as needed.
 
 ## Contributing
