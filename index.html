@@ -1,339 +1,315 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pico W2 BLE Control</title>
-  <style>
-    :root{--accent:#007bff;--good:#28a745;--bad:#dc3545;--card:#fff}
-    body{font-family:system-ui,Segoe UI,Roboto,Arial; padding:20px;background:#f6f8fa;color:#0b1220}
-    .wrap{max-width:680px;margin:0 auto}
-    header{display:flex;align-items:center;justify-content:space-between}
-    h1{font-size:1.25rem;margin:0}
-    button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
-    .controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:14px}
-    .card{background:var(--card);padding:12px;border-radius:10px;border:1px solid #eaecef}
-    .status{font-weight:700;padding:6px 8px;border-radius:8px}
-    .lines{display:flex;gap:8px;flex-direction:column}
-    .row{display:flex;align-items:center;justify-content:space-between}
-    .small{font-size:0.85rem;color:#495057}
-    .grow{flex:1}
-    .footer{font-size:0.9rem;color:#666;margin-top:18px}
-    .danger{background:var(--bad)}
-    .ok{background:var(--good)}
-  </style>
-  <meta name="description" content="Web Bluetooth UI to control Pico W2 BLE branches and motion notifications." />
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>Pico W2 — BLE Control</h1>
-      <div>
-        <button id="connectBtn">Connect</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pico W2 BLE Control</title>
+    <style>
+      :root {
+        --accent: #007bff;
+        --good: #28a745;
+        --bad: #dc3545;
+        --card: #fff;
+      }
+      body {
+        font-family: system-ui, Segoe UI, Roboto, Arial;
+        padding: 20px;
+        background: #f6f8fa;
+        color: #0b1220;
+      }
+      .wrap {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0;
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .card {
+        background: var(--card);
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #eaecef;
+      }
+      .status {
+        font-weight: 700;
+        padding: 6px 8px;
+        border-radius: 8px;
+      }
+      .lines {
+        display: flex;
+        gap: 8px;
+        flex-direction: column;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .small {
+        font-size: 0.85rem;
+        color: #495057;
+      }
+      .grow {
+        flex: 1;
+      }
+      .footer {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 18px;
+      }
+      .danger {
+        background: var(--bad);
+      }
+      .ok {
+        background: var(--good);
+      }
+      .toggle-btn {
+        background: #17a2b8;
+        margin-left: 8px;
+      }
+      .ack-section {
+        background: #f8f9fa;
+        border-left: 4px solid #17a2b8;
+        font-family: monospace;
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Pico W2 — BLE Control</h1>
+        <div>
+          <button id="connectBtn">Connect</button>
+          <button id="toggleBtn" class="toggle-btn" disabled>TOGGLE ALL</button>
+        </div>
+      </header>
+
+      <div id="connectionState" class="small" style="margin-top: 8px"
+        >Not connected</div
+      >
+
+      <div class="controls" id="branches">
+        <!-- JS will populate 5 cards for each branch -->
       </div>
-    </header>
 
-    <div id="connectionState" class="small" style="margin-top:8px">Not connected</div>
+      <div class="card" style="margin-top: 10px">
+        <div class="row"
+          ><div class="small">Motion</div
+          ><div id="motionBadge" class="status danger">—</div></div
+        >
+        <div style="height: 6px"></div>
+        <div class="small">Raw notifications:</div>
+        <pre
+          id="raw"
+          style="
+            background: #f7f9fb;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            max-height: 140px;
+            overflow: auto;
+          "
+        ></pre>
+      </div>
 
-    <div class="controls" id="branches">
-      <!-- JS will populate 5 cards for each branch -->
+      <div class="card ack-section" style="margin-top: 10px">
+        <div class="small" style="margin-bottom: 6px">ACK Messages:</div>
+        <pre
+          id="ackMessages"
+          style="
+            background: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            max-height: 100px;
+            overflow: auto;
+            min-height: 50px;
+          "
+        ></pre>
+      </div>
+
+      <div class="footer"
+        >Use Chrome on Android for best Web Bluetooth support. Click Connect,
+        pick <strong>PicoW2-BLE</strong>, then allow notifications.</div
+      >
     </div>
 
-    <div class="card" style="margin-top:10px">
-      <div class="row"><div class="small">Motion</div><div id="motionBadge" class="status danger">—</div></div>
-      <div style="height:6px"></div>
-      <div class="small">Raw notifications:</div>
-      <pre id="raw" style="background:#f7f9fb;padding:8px;border-radius:6px;border:1px solid #eee;max-height:140px;overflow:auto"></pre>
-    </div>
+    <script>
+      // UUIDs (match your main_ble and Nordic UART-style service)
+      const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+      const TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // notify
+      const RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // write
 
-    <div class="footer">Use Chrome on Android for best Web Bluetooth support. Click Connect, pick <strong>PicoW2-BLE</strong>, then allow notifications.</div>
-  </div>
+      let device = null;
+      let server = null;
+      let rxChar = null;
+      let txChar = null;
+      let states = [0, 0, 0, 0, 0];
+      let motion = 0;
 
-<script>
-// UUIDs (match your main_ble and Nordic UART-style service)
-const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify
-const RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write
+      const connectBtn = document.getElementById("connectBtn");
+      const toggleBtn = document.getElementById("toggleBtn");
+      const connState = document.getElementById("connectionState");
+      const branchesEl = document.getElementById("branches");
+      const rawEl = document.getElementById("raw");
+      const ackEl = document.getElementById("ackMessages");
+      const motionBadge = document.getElementById("motionBadge");
 
-let device = null;
-let server = null;
-let rxChar = null;
-let txChar = null;
-let states = [0,0,0,0,0];
-let motion = 0;
+      connectBtn.addEventListener("click", async () => {
+        if (device && device.gatt.connected) {
+          await disconnect();
+          return;
+        }
+        try {
+          connState.textContent = "Requesting device...";
+          device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: "PicoW2-BLE" }],
+            optionalServices: [SERVICE_UUID],
+          });
+          connState.textContent = "Connecting...";
+          server = await device.gatt.connect();
+          connState.textContent = "Connected";
+          connectBtn.textContent = "Disconnect";
+          toggleBtn.disabled = false;
 
-const connectBtn = document.getElementById('connectBtn');
-const connState = document.getElementById('connectionState');
-const branchesEl = document.getElementById('branches');
-const rawEl = document.getElementById('raw');
-const motionBadge = document.getElementById('motionBadge');
+          const service = await server.getPrimaryService(SERVICE_UUID);
+          txChar = await service.getCharacteristic(TX_UUID);
+          rxChar = await service.getCharacteristic(RX_UUID);
 
-connectBtn.addEventListener('click', async () => {
-  if (device && device.gatt.connected) {
-    await disconnect();
-    return;
-  }
-  try {
-    connState.textContent = 'Requesting device...' ;
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: 'PicoW2-BLE' }],
-      optionalServices: [SERVICE_UUID]
-    });
-    connState.textContent = 'Connecting...';
-    server = await device.gatt.connect();
-    connState.textContent = 'Connected';
-    connectBtn.textContent = 'Disconnect';
+          await txChar.startNotifications();
+          txChar.addEventListener("characteristicvaluechanged", onNotify);
 
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    txChar = await service.getCharacteristic(TX_UUID);
-    rxChar = await service.getCharacteristic(RX_UUID);
+          // request initial status
+          await sendCmd("STATUS");
+        } catch (err) {
+          connState.textContent = "Connect failed: " + err;
+        }
+      });
 
-    await txChar.startNotifications();
-    txChar.addEventListener('characteristicvaluechanged', onNotify);
+      async function disconnect() {
+        try {
+          if (txChar)
+            txChar.removeEventListener("characteristicvaluechanged", onNotify);
+          if (device && device.gatt.connected) await device.gatt.disconnect();
+        } catch (e) {
+          console.log("disconnect problem", e);
+        }
+        device = null;
+        server = null;
+        rxChar = null;
+        txChar = null;
+        connectBtn.textContent = "Connect";
+        toggleBtn.disabled = true;
+        connState.textContent = "Not connected";
+      }
 
-    // request initial status
-    await sendCmd('STATUS');
-  } catch (err) {
-    connState.textContent = 'Connect failed: ' + err;
-  }
-});
+      function onNotify(event) {
+        const value = new TextDecoder().decode(event.target.value);
 
-async function disconnect(){
-  try{
-    if (txChar) txChar.removeEventListener('characteristicvaluechanged', onNotify);
-    if (device && device.gatt.connected) await device.gatt.disconnect();
-  } catch(e) { console.log('disconnect problem', e) }
-  device=null; server=null; rxChar=null; txChar=null; connectBtn.textContent = 'Connect';
-  connState.textContent = 'Not connected';
-}
+        try {
+          const j = JSON.parse(value);
+          // This is JSON status data
+          rawEl.textContent += value + "\n";
+          if (j.states) {
+            states = j.states;
+            updateBranchBadges();
+          }
+          if (typeof j.motion !== "undefined") {
+            motion = j.motion;
+            motionBadge.textContent = motion ? "MOTION" : "NO";
+            motionBadge.className = "status " + (motion ? "ok" : "danger");
+          }
+        } catch (e) {
+          // Not JSON - treat as ACK message
+          ackEl.textContent += value + "\n";
+          // Also keep a copy in raw for debugging
+          rawEl.textContent += "[ACK] " + value + "\n";
+        }
+      }
 
-function onNotify(event){
-  const value = new TextDecoder().decode(event.target.value);
-  rawEl.textContent += value + '\n';
-  try{
-    const j = JSON.parse(value);
-    if (j.states) {
-      states = j.states;
-      updateBranchBadges();
-    }
-    if (typeof j.motion !== 'undefined') {
-      motion = j.motion;
-      motionBadge.textContent = motion ? 'MOTION' : 'NO';
-      motionBadge.className = 'status ' + (motion ? 'ok' : 'danger');
-    }
-  }catch(e){
-    // not JSON (may be ACKs) — just leave in raw
-  }
-}
+      async function sendCmd(s) {
+        if (!rxChar) {
+          alert("Not connected to RX characteristic");
+          return;
+        }
+        const encoder = new TextEncoder();
+        await rxChar.writeValue(encoder.encode(s));
+      }
 
-async function sendCmd(s){
-  if (!rxChar) {
-    alert('Not connected to RX characteristic');
-    return;
-  }
-  const encoder = new TextEncoder();
-  await rxChar.writeValue(encoder.encode(s));
-}
+      async function toggleAllBranches() {
+        // Toggle all branches to the opposite of the majority state
+        const onCount = states.reduce((sum, state) => sum + state, 0);
+        const shouldTurnOn = onCount < 3; // If less than 3 are on, turn all on; otherwise turn all off
 
-function makeBranchCard(i){
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'>
-    <div><strong>Branch ${i+1}</strong><div class='small'>Pin GP${[15,16,17,18,19][i]}</div></div>
+        for (let i = 0; i < 5; i++) {
+          await sendCmd(shouldTurnOn ? "ON" + i : "OFF" + i);
+          // Small delay between commands to avoid overwhelming the device
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      }
+
+      function makeBranchCard(i) {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'>
+    <div><strong>Branch ${i + 1}</strong><div class='small'>Pin GP${
+          [15, 16, 17, 18, 19][i]
+        }</div></div>
     <div style='text-align:right'><div id='badge${i}' class='status danger'>OFF</div>
     <div style='margin-top:10px'><button id='on${i}'>ON</button> <button id='off${i}' style='background:#6c757d'>OFF</button></div></div></div>`;
-  return div;
-}
+        return div;
+      }
 
-function updateBranchBadges(){
-  for (let i=0;i<5;i++){
-    const badge = document.getElementById('badge'+i);
-    if (!badge) continue;
-    badge.textContent = states[i] ? 'ON' : 'OFF';
-    badge.className = 'status ' + (states[i] ? 'ok' : 'danger');
-  }
-}
+      function updateBranchBadges() {
+        for (let i = 0; i < 5; i++) {
+          const badge = document.getElementById("badge" + i);
+          if (!badge) continue;
+          badge.textContent = states[i] ? "ON" : "OFF";
+          badge.className = "status " + (states[i] ? "ok" : "danger");
+        }
+      }
 
-// populate UI
-for (let i=0;i<5;i++){
-  const el = makeBranchCard(i);
-  branchesEl.appendChild(el);
-  // attach handlers
-  document.getElementById('on'+i).addEventListener('click', ()=>sendCmd('ON'+i));
-  document.getElementById('off'+i).addEventListener('click', ()=>sendCmd('OFF'+i));
-}
+      // populate UI
+      for (let i = 0; i < 5; i++) {
+        const el = makeBranchCard(i);
+        branchesEl.appendChild(el);
+        // attach handlers
+        document
+          .getElementById("on" + i)
+          .addEventListener("click", () => sendCmd("ON" + i));
+        document
+          .getElementById("off" + i)
+          .addEventListener("click", () => sendCmd("OFF" + i));
+      }
 
-// shortcut: long-poll current status every 15s while connected
-setInterval(()=>{ if (txChar) sendCmd('STATUS'); }, 15000);
-</script>
-</body>
-</html>
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pico W2 BLE Control</title>
-  <style>
-    :root{--accent:#007bff;--good:#28a745;--bad:#dc3545;--card:#fff}
-    body{font-family:system-ui,Segoe UI,Roboto,Arial; padding:20px;background:#f6f8fa;color:#0b1220}
-    .wrap{max-width:680px;margin:0 auto}
-    header{display:flex;align-items:center;justify-content:space-between}
-    h1{font-size:1.25rem;margin:0}
-    button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
-    .controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:14px}
-    .card{background:var(--card);padding:12px;border-radius:10px;border:1px solid #eaecef}
-    .status{font-weight:700;padding:6px 8px;border-radius:8px}
-    .lines{display:flex;gap:8px;flex-direction:column}
-    .row{display:flex;align-items:center;justify-content:space-between}
-    .small{font-size:0.85rem;color:#495057}
-    .grow{flex:1}
-    .footer{font-size:0.9rem;color:#666;margin-top:18px}
-    .danger{background:var(--bad)}
-    .ok{background:var(--good)}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>Pico W2 — BLE Control</h1>
-      <div>
-        <button id="connectBtn">Connect</button>
-      </div>
-    </header>
+      // Toggle button handler
+      toggleBtn.addEventListener("click", toggleAllBranches);
 
-    <div id="connectionState" class="small" style="margin-top:8px">Not connected</div>
-
-    <div class="controls" id="branches">
-      <!-- JS will populate 5 cards for each branch -->
-    </div>
-
-    <div class="card" style="margin-top:10px">
-      <div class="row"><div class="small">Motion</div><div id="motionBadge" class="status danger">—</div></div>
-      <div style="height:6px"></div>
-      <div class="small">Raw notifications:</div>
-      <pre id="raw" style="background:#f7f9fb;padding:8px;border-radius:6px;border:1px solid #eee;max-height:140px;overflow:auto"></pre>
-    </div>
-
-    <div class="footer">Use Chrome on Android for best Web Bluetooth support. Click Connect, pick <strong>PicoW2-BLE</strong>, then allow notifications.</div>
-  </div>
-
-<script>
-// UUIDs (match your main_ble and Nordic UART-style service)
-const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify
-const RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write
-
-let device = null;
-let server = null;
-let rxChar = null;
-let txChar = null;
-let states = [0,0,0,0,0];
-let motion = 0;
-
-const connectBtn = document.getElementById('connectBtn');
-const connState = document.getElementById('connectionState');
-const branchesEl = document.getElementById('branches');
-const rawEl = document.getElementById('raw');
-const motionBadge = document.getElementById('motionBadge');
-
-connectBtn.addEventListener('click', async () => {
-  if (device && device.gatt.connected) {
-    await disconnect();
-    return;
-  }
-  try {
-    connState.textContent = 'Requesting device...' ;
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: 'PicoW2-BLE' }],
-      optionalServices: [SERVICE_UUID]
-    });
-    connState.textContent = 'Connecting...';
-    server = await device.gatt.connect();
-    connState.textContent = 'Connected';
-    connectBtn.textContent = 'Disconnect';
-
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    txChar = await service.getCharacteristic(TX_UUID);
-    rxChar = await service.getCharacteristic(RX_UUID);
-
-    await txChar.startNotifications();
-    txChar.addEventListener('characteristicvaluechanged', onNotify);
-
-    // request initial status
-    await sendCmd('STATUS');
-  } catch (err) {
-    connState.textContent = 'Connect failed: ' + err;
-  }
-});
-
-async function disconnect(){
-  try{
-    if (txChar) txChar.removeEventListener('characteristicvaluechanged', onNotify);
-    if (device && device.gatt.connected) await device.gatt.disconnect();
-  } catch(e) { console.log('disconnect problem', e) }
-  device=null; server=null; rxChar=null; txChar=null; connectBtn.textContent = 'Connect';
-  connState.textContent = 'Not connected';
-}
-
-function onNotify(event){
-  const value = new TextDecoder().decode(event.target.value);
-  rawEl.textContent += value + '\n';
-  try{
-    const j = JSON.parse(value);
-    if (j.states) {
-      states = j.states;
-      updateBranchBadges();
-    }
-    if (typeof j.motion !== 'undefined') {
-      motion = j.motion;
-      motionBadge.textContent = motion ? 'MOTION' : 'NO';
-      motionBadge.className = 'status ' + (motion ? 'ok' : 'danger');
-    }
-  }catch(e){
-    // not JSON (may be ACKs) — just leave in raw
-  }
-}
-
-async function sendCmd(s){
-  if (!rxChar) {
-    alert('Not connected to RX characteristic');
-    return;
-  }
-  const encoder = new TextEncoder();
-  await rxChar.writeValue(encoder.encode(s));
-}
-
-function makeBranchCard(i){
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'>
-    <div><strong>Branch ${i+1}</strong><div class='small'>Pin GP${[15,16,17,18,19][i]}</div></div>
-    <div style='text-align:right'><div id='badge${i}' class='status danger'>OFF</div>
-    <div style='margin-top:10px'><button id='on${i}'>ON</button> <button id='off${i}' style='background:#6c757d'>OFF</button></div></div></div>`;
-  return div;
-}
-
-function updateBranchBadges(){
-  for (let i=0;i<5;i++){
-    const badge = document.getElementById('badge'+i);
-    if (!badge) continue;
-    badge.textContent = states[i] ? 'ON' : 'OFF';
-    badge.className = 'status ' + (states[i] ? 'ok' : 'danger');
-  }
-}
-
-// populate UI
-for (let i=0;i<5;i++){
-  const el = makeBranchCard(i);
-  branchesEl.appendChild(el);
-  // attach handlers
-  document.getElementById('on'+i).addEventListener('click', ()=>sendCmd('ON'+i));
-  document.getElementById('off'+i).addEventListener('click', ()=>sendCmd('OFF'+i));
-}
-
-// shortcut: long-poll current status every 15s while connected
-setInterval(()=>{ if (txChar) sendCmd('STATUS'); }, 15000);
-</script>
-</body>
+      // shortcut: long-poll current status every 15s while connected
+      setInterval(() => {
+        if (txChar) sendCmd("STATUS");
+      }, 15000);
+    </script>
+  </body>
 </html>
