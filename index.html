@@ -240,6 +240,146 @@
         font-family: monospace;
         font-size: 0.8rem;
       }
+
+      .motion-meter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 15px;
+      }
+
+      .meter-container {
+        flex: 1;
+        margin: 0 15px;
+        position: relative;
+      }
+
+      .meter-gauge {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: conic-gradient(
+          from 135deg,
+          #dc3545 0deg,
+          #ffc107 45deg,
+          #28a745 90deg,
+          #28a745 135deg,
+          #ffc107 180deg,
+          #dc3545 225deg
+        );
+        position: relative;
+        margin: 0 auto;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .meter-inner {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 90px;
+        height: 90px;
+        background: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .meter-needle {
+        position: absolute;
+        width: 2px;
+        height: 35px;
+        background: #333;
+        top: 20px;
+        left: 59px;
+        transform-origin: bottom center;
+        transform: rotate(0deg);
+        transition: transform 0.5s ease;
+        border-radius: 1px;
+        z-index: 10;
+      }
+
+      .meter-needle::after {
+        content: "";
+        position: absolute;
+        bottom: -3px;
+        left: -2px;
+        width: 6px;
+        height: 6px;
+        background: #333;
+        border-radius: 50%;
+      }
+
+      .meter-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--primary);
+        margin: 0;
+      }
+
+      .meter-label {
+        font-size: 0.7rem;
+        color: #666;
+        margin: 2px 0 0 0;
+        text-transform: uppercase;
+      }
+
+      .meter-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #dc3545;
+        transition: all 0.3s ease;
+      }
+
+      .status-indicator.active {
+        background: #28a745;
+        box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+        animation: pulse-indicator 2s infinite;
+      }
+
+      @keyframes pulse-indicator {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .motion-meter {
+          flex-direction: column;
+          gap: 15px;
+        }
+        .meter-gauge {
+          width: 100px;
+          height: 100px;
+        }
+        .meter-inner {
+          width: 75px;
+          height: 75px;
+          top: 12.5px;
+          left: 12.5px;
+        }
+        .meter-needle {
+          height: 30px;
+          top: 17px;
+          left: 49px;
+        }
+        .meter-value {
+          font-size: 1rem;
+        }
+      }
     </style>
   </head>
   <body>
@@ -312,11 +452,27 @@
       </div>
 
       <div class="card" style="margin-top: 10px">
-        <div class="row"
-          ><div class="small">Motion</div
-          ><div id="motionBadge" class="status danger">—</div></div
-        >
-        <div style="height: 6px"></div>
+        <div class="motion-meter">
+          <div
+            class="small"
+            style="font-size: 1rem; font-weight: 600; color: var(--primary)"
+            >Motion Sensor</div
+          >
+          <div class="meter-container">
+            <div class="meter-gauge">
+              <div class="meter-inner">
+                <div class="meter-value" id="motionValue">0</div>
+                <div class="meter-label">Motion</div>
+              </div>
+              <div class="meter-needle" id="motionNeedle"></div>
+            </div>
+          </div>
+          <div class="meter-status">
+            <div class="status-indicator" id="motionIndicator"></div>
+            <div class="small" id="motionStatus">Inactive</div>
+          </div>
+        </div>
+        <div style="height: 10px"></div>
         <div class="small">Raw notifications:</div>
         <pre
           id="raw"
@@ -370,7 +526,10 @@
       const connState = document.getElementById("connectionState");
       const rawEl = document.getElementById("raw");
       const ackEl = document.getElementById("ackMessages");
-      const motionBadge = document.getElementById("motionBadge");
+      const motionValue = document.getElementById("motionValue");
+      const motionNeedle = document.getElementById("motionNeedle");
+      const motionIndicator = document.getElementById("motionIndicator");
+      const motionStatus = document.getElementById("motionStatus");
 
       connectBtn.addEventListener("click", async () => {
         if (device && device.gatt.connected) {
@@ -431,8 +590,7 @@
           }
           if (typeof j.motion !== "undefined") {
             motion = j.motion;
-            motionBadge.textContent = motion ? "MOTION" : "NO";
-            motionBadge.className = "status " + (motion ? "ok" : "danger");
+            updateMotionGauge(motion);
           }
         } catch (e) {
           // Not JSON - treat as ACK message
@@ -458,6 +616,35 @@
 
           badge.textContent = states[i] ? "ON" : "OFF";
           badge.className = "branch-status " + (states[i] ? "ok" : "danger");
+        }
+      }
+
+      function updateMotionGauge(motionState) {
+        // Update the gauge value (0-100 scale)
+        const displayValue = motionState ? 85 : 0;
+
+        // Update needle position (rotate from -90deg to +90deg)
+        const needleRotation = motionState ? 45 : -90;
+        if (motionNeedle) {
+          motionNeedle.style.transform = `rotate(${needleRotation}deg)`;
+        }
+
+        // Update status indicator and text
+        if (motionIndicator) {
+          if (motionState) {
+            motionIndicator.classList.add("active");
+          } else {
+            motionIndicator.classList.remove("active");
+          }
+        }
+
+        if (motionStatus) {
+          motionStatus.textContent = motionState ? "Active" : "Inactive";
+        }
+
+        // Update the numeric display
+        if (document.getElementById("motionValue")) {
+          document.getElementById("motionValue").textContent = displayValue;
         }
       }
 
