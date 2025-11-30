@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,user-scalable=no"
+    />
     <title>Pico W2 BLE Control</title>
     <style>
       :root {
@@ -10,72 +13,366 @@
         --good: #28a745;
         --bad: #dc3545;
         --card: #fff;
+        --star-outline: #ddd;
+        --star-active: #ffd700;
       }
       body {
         font-family: system-ui, Segoe UI, Roboto, Arial;
         padding: 20px;
-        background: #f6f8fa;
-        color: #0b1220;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        min-height: 100vh;
       }
       .wrap {
-        max-width: 680px;
-        margin: 0 auto;
+        max-width: 100%;
+        margin: 0;
+        padding: 0 10px;
       }
       header {
         display: flex;
+        flex-direction: column;
+        gap: 15px;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
       }
       h1 {
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         margin: 0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        text-align: center;
       }
       button {
         background: var(--accent);
         color: #fff;
         border: 0;
-        padding: 10px 12px;
+        padding: 12px 16px;
         border-radius: 8px;
         cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        min-height: 44px;
+        min-width: 80px;
+        font-size: 0.9rem;
       }
-      .controls {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 10px;
-        margin-top: 14px;
+      button:hover,
+      button:active {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
       }
-      .card {
-        background: var(--card);
-        padding: 12px;
+      @media (max-width: 768px) {
+        .wrap {
+          padding: 0 5px;
+        }
+        header {
+          flex-direction: column;
+          gap: 10px;
+        }
+        h1 {
+          font-size: 1.1rem;
+        }
+        button {
+          padding: 10px 14px;
+          font-size: 0.8rem;
+        }
+      }
+      .star-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+        position: relative;
+        height: 350px;
+        width: 100%;
+      }
+      .star-svg {
+        width: 280px;
+        height: 280px;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+      }
+      @media (max-width: 768px) {
+        .star-container {
+          height: 300px;
+          margin: 15px 0;
+        }
+        .star-svg {
+          width: 240px;
+          height: 240px;
+        }
+      }
+      @media (max-width: 480px) {
+        .star-container {
+          height: 280px;
+        }
+        .star-svg {
+          width: 220px;
+          height: 220px;
+        }
+      }
+      .star-path {
+        fill: rgba(255, 255, 255, 0.2);
+        stroke: rgba(255, 255, 255, 0.5);
+        stroke-width: 2;
+        transition: all 0.4s ease;
+        cursor: pointer;
+      }
+      .star-path:hover {
+        fill: rgba(255, 215, 0, 0.3);
+        stroke: rgba(255, 215, 0, 0.8);
+      }
+      .star-path.active {
+        fill: var(--star-active);
+        stroke: #fff;
+        stroke-width: 3;
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9));
+        animation: pulse 2s ease-in-out infinite alternate;
+      }
+      @keyframes pulse {
+        0% {
+          filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9));
+        }
+        100% {
+          filter: drop-shadow(0 0 25px rgba(255, 215, 0, 1))
+            drop-shadow(0 0 35px rgba(255, 215, 0, 0.6));
+        }
+      }
+      .branch-control {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        padding: 10px;
         border-radius: 10px;
-        border: 1px solid #eaecef;
+        text-align: center;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        min-width: 100px;
+        max-width: 110px;
+        transition: all 0.3s ease;
+      }
+      .branch-control:hover,
+      .branch-control:active {
+        transform: scale(1.03);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      }
+      .branch-title {
+        font-weight: bold;
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+      }
+      .branch-pin {
+        font-size: 0.7rem;
+        color: #666;
+        margin-bottom: 6px;
+      }
+      .branch-status {
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 15px;
+        margin-bottom: 8px;
+        font-size: 0.75rem;
+      }
+      .branch-buttons {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+      }
+      .branch-btn {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+        border-radius: 5px;
+        flex: 1;
+        transition: all 0.2s ease;
+        min-height: 32px;
+      }
+      @media (max-width: 768px) {
+        .branch-control {
+          padding: 8px;
+          min-width: 85px;
+          max-width: 95px;
+        }
+        .branch-title {
+          font-size: 0.8rem;
+        }
+        .branch-pin {
+          font-size: 0.65rem;
+        }
+        .branch-status {
+          font-size: 0.7rem;
+          padding: 3px 6px;
+        }
+        .branch-btn {
+          font-size: 0.65rem;
+          padding: 5px 6px;
+          min-height: 30px;
+        }
+      }
+      @media (max-width: 480px) {
+        .branch-control {
+          padding: 6px;
+          min-width: 75px;
+          max-width: 85px;
+        }
+        .branch-title {
+          font-size: 0.75rem;
+        }
+        .branch-pin {
+          font-size: 0.6rem;
+        }
+        .branch-status {
+          font-size: 0.65rem;
+        }
+        .branch-btn {
+          font-size: 0.6rem;
+          padding: 4px 5px;
+          min-height: 28px;
+        }
+      }
+      .branch-btn.on {
+        background: var(--good);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+      }
+      .branch-btn.off {
+        background: var(--bad);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+      }
+      /* Position controls around star points */
+      .branch-0 {
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .branch-1 {
+        top: 80px;
+        right: -10px;
+      }
+      .branch-2 {
+        bottom: 35px;
+        right: 25px;
+      }
+      .branch-3 {
+        bottom: 35px;
+        left: 25px;
+      }
+      .branch-4 {
+        top: 80px;
+        left: -10px;
+      }
+
+      @media (max-width: 768px) {
+        .branch-0 {
+          top: 0px;
+        }
+        .branch-1 {
+          top: 70px;
+          right: -5px;
+        }
+        .branch-2 {
+          bottom: 30px;
+          right: 15px;
+        }
+        .branch-3 {
+          bottom: 30px;
+          left: 15px;
+        }
+        .branch-4 {
+          top: 70px;
+          left: -5px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .branch-0 {
+          top: 5px;
+        }
+        .branch-1 {
+          top: 60px;
+          right: 0px;
+        }
+        .branch-2 {
+          bottom: 25px;
+          right: 10px;
+        }
+        .branch-3 {
+          bottom: 25px;
+          left: 10px;
+        }
+        .branch-4 {
+          top: 60px;
+          left: 0px;
+        }
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        padding: 15px;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        margin-bottom: 15px;
       }
       .status {
         font-weight: 700;
-        padding: 6px 8px;
-        border-radius: 8px;
-      }
-      .lines {
-        display: flex;
-        gap: 8px;
-        flex-direction: column;
+        padding: 6px 10px;
+        border-radius: 15px;
+        color: #fff;
+        font-size: 0.8rem;
       }
       .row {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
       }
       .small {
-        font-size: 0.85rem;
-        color: #495057;
-      }
-      .grow {
-        flex: 1;
+        font-size: 0.8rem;
+        color: #666;
       }
       .footer {
-        font-size: 0.9rem;
-        color: #666;
-        margin-top: 18px;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-top: 20px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+      }
+
+      @media (max-width: 768px) {
+        .card {
+          padding: 12px;
+          margin-bottom: 12px;
+        }
+        .status {
+          padding: 5px 8px;
+          font-size: 0.75rem;
+        }
+        .small {
+          font-size: 0.75rem;
+        }
+        .footer {
+          font-size: 0.75rem;
+          padding: 12px;
+          margin-top: 15px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .card {
+          padding: 10px;
+        }
+        .footer {
+          font-size: 0.7rem;
+          padding: 10px;
+        }
       }
       .danger {
         background: var(--bad);
@@ -88,7 +385,7 @@
         margin-left: 8px;
       }
       .ack-section {
-        background: #f8f9fa;
+        background: rgba(248, 249, 250, 0.95);
         border-left: 4px solid #17a2b8;
         font-family: monospace;
         font-size: 0.8rem;
@@ -109,8 +406,104 @@
         >Not connected</div
       >
 
-      <div class="controls" id="branches">
-        <!-- JS will populate 5 cards for each branch -->
+      <div class="star-container">
+        <svg class="star-svg" viewBox="0 0 400 400">
+          <!-- Star outline (always visible) -->
+          <path
+            class="star-outline"
+            d="M200 50 L220 130 L310 130 L240 190 L260 280 L200 220 L140 280 L160 190 L90 130 L180 130 Z"
+            fill="none"
+            stroke="rgba(255,255,255,0.4)"
+            stroke-width="3"
+          />
+
+          <!-- Five individual star points that can light up -->
+          <!-- Top point (Branch 1) -->
+          <path
+            id="star-0"
+            class="star-path"
+            d="M200 50 L180 130 L200 110 L220 130 Z"
+          />
+
+          <!-- Top right point (Branch 2) -->
+          <path
+            id="star-1"
+            class="star-path"
+            d="M310 130 L240 190 L270 150 L240 150 Z"
+          />
+
+          <!-- Bottom right point (Branch 3) -->
+          <path
+            id="star-2"
+            class="star-path"
+            d="M260 280 L240 190 L250 230 L200 220 Z"
+          />
+
+          <!-- Bottom left point (Branch 4) -->
+          <path
+            id="star-3"
+            class="star-path"
+            d="M140 280 L160 190 L150 230 L200 220 Z"
+          />
+
+          <!-- Top left point (Branch 5) -->
+          <path
+            id="star-4"
+            class="star-path"
+            d="M90 130 L160 190 L130 150 L160 150 Z"
+          />
+        </svg>
+
+        <!-- Branch controls positioned at star points -->
+        <div class="branch-control branch-0" id="branch-0">
+          <div class="branch-title">Branch 1</div>
+          <div class="branch-pin">Pin GP15</div>
+          <div id="badge0" class="branch-status danger">OFF</div>
+          <div class="branch-buttons">
+            <button id="on0" class="branch-btn on">ON</button>
+            <button id="off0" class="branch-btn off">OFF</button>
+          </div>
+        </div>
+
+        <div class="branch-control branch-1" id="branch-1">
+          <div class="branch-title">Branch 2</div>
+          <div class="branch-pin">Pin GP16</div>
+          <div id="badge1" class="branch-status danger">OFF</div>
+          <div class="branch-buttons">
+            <button id="on1" class="branch-btn on">ON</button>
+            <button id="off1" class="branch-btn off">OFF</button>
+          </div>
+        </div>
+
+        <div class="branch-control branch-2" id="branch-2">
+          <div class="branch-title">Branch 3</div>
+          <div class="branch-pin">Pin GP17</div>
+          <div id="badge2" class="branch-status danger">OFF</div>
+          <div class="branch-buttons">
+            <button id="on2" class="branch-btn on">ON</button>
+            <button id="off2" class="branch-btn off">OFF</button>
+          </div>
+        </div>
+
+        <div class="branch-control branch-3" id="branch-3">
+          <div class="branch-title">Branch 4</div>
+          <div class="branch-pin">Pin GP18</div>
+          <div id="badge3" class="branch-status danger">OFF</div>
+          <div class="branch-buttons">
+            <button id="on3" class="branch-btn on">ON</button>
+            <button id="off3" class="branch-btn off">OFF</button>
+          </div>
+        </div>
+
+        <div class="branch-control branch-4" id="branch-4">
+          <div class="branch-title">Branch 5</div>
+          <div class="branch-pin">Pin GP19</div>
+          <div id="badge4" class="branch-status danger">OFF</div>
+          <div class="branch-buttons">
+            <button id="on4" class="branch-btn on">ON</button>
+            <button id="off4" class="branch-btn off">OFF</button>
+          </div>
+        </div>
       </div>
 
       <div class="card" style="margin-top: 10px">
@@ -171,7 +564,6 @@
       const connectBtn = document.getElementById("connectBtn");
       const toggleBtn = document.getElementById("toggleBtn");
       const connState = document.getElementById("connectionState");
-      const branchesEl = document.getElementById("branches");
       const rawEl = document.getElementById("raw");
       const ackEl = document.getElementById("ackMessages");
       const motionBadge = document.getElementById("motionBadge");
@@ -269,38 +661,39 @@
         }
       }
 
-      function makeBranchCard(i) {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'>
-    <div><strong>Branch ${i + 1}</strong><div class='small'>Pin GP${
-          [15, 16, 17, 18, 19][i]
-        }</div></div>
-    <div style='text-align:right'><div id='badge${i}' class='status danger'>OFF</div>
-    <div style='margin-top:10px'><button id='on${i}'>ON</button> <button id='off${i}' style='background:#6c757d'>OFF</button></div></div></div>`;
-        return div;
-      }
-
       function updateBranchBadges() {
         for (let i = 0; i < 5; i++) {
           const badge = document.getElementById("badge" + i);
-          if (!badge) continue;
+          const starPath = document.getElementById("star-" + i);
+          if (!badge || !starPath) continue;
+
           badge.textContent = states[i] ? "ON" : "OFF";
-          badge.className = "status " + (states[i] ? "ok" : "danger");
+          badge.className = "branch-status " + (states[i] ? "ok" : "danger");
+
+          // Update star point visual
+          if (states[i]) {
+            starPath.classList.add("active");
+          } else {
+            starPath.classList.remove("active");
+          }
         }
       }
 
-      // populate UI
+      // Attach event handlers to existing buttons
       for (let i = 0; i < 5; i++) {
-        const el = makeBranchCard(i);
-        branchesEl.appendChild(el);
-        // attach handlers
         document
           .getElementById("on" + i)
           .addEventListener("click", () => sendCmd("ON" + i));
         document
           .getElementById("off" + i)
           .addEventListener("click", () => sendCmd("OFF" + i));
+
+        // Add click functionality to star points for easy toggle
+        document.getElementById("star-" + i).addEventListener("click", () => {
+          // Toggle the branch state
+          const newState = states[i] ? "OFF" : "ON";
+          sendCmd(newState + i);
+        });
       }
 
       // Toggle button handler
